@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Liste de courses</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14305e">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Courses">
 <style>
 :root{--bleu:#14305e;--bleu2:#1d4a8a;--fond:#f3f5f9;--ligne:#dde3ee;--ok:#1f8a4c}
 *{box-sizing:border-box}
@@ -72,7 +79,7 @@ body:not(.dt) #vueDettes{display:none}
 </style>
 </head>
 <body>
-<header><h1 id="titre">🛒 Liste de courses</h1><a href="#histo" id="lienHisto">Historique</a></header>
+<header><h1 id="titre">🛒 Liste de courses</h1><span style="display:flex;gap:8px;align-items:center"><button id="install" style="display:none;background:#ffd54a;color:#14305e;font-weight:600;padding:6px 12px;border-radius:16px;font-size:14px">⬇ Installer</button><a href="#histo" id="lienHisto">Historique</a></span></header>
 <div class="tabs"><button data-mode="courses">🛒 Courses</button><button data-mode="credits">💳 Crédits</button><button data-mode="dettes">🤝 Dettes</button></div>
 <div class="bar">
   <input id="rech" placeholder="Rechercher ou ajouter un produit…" autocomplete="off">
@@ -510,6 +517,16 @@ function construirePDFDettes(L){
   pages.forEach((p,i)=>{p.push(`BT 0.4 0.44 0.52 rg /F1 9 Tf ${W/2-30} 24 Td (Page ${i+1} / ${pages.length}) Tj ET`)});
   return assembler(pages,W,H);
 }
+/* ---------- Installation (raccourci sur l'écran d'accueil / le bureau) ---------- */
+let invite=null;
+const ios=/iphone|ipad|ipod/i.test(navigator.userAgent),autonome=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();invite=e;$("install").style.display=""});
+window.addEventListener("appinstalled",()=>{invite=null;$("install").style.display="none";toast("Application installée ✓")});
+if(ios&&!autonome)$("install").style.display="";
+$("install").onclick=async()=>{
+  if(invite){invite.prompt();await invite.userChoice;invite=null;$("install").style.display="none"}
+  else alert("Sur iPhone : appuyez sur le bouton Partager (carré avec une flèche), puis « Sur l'écran d'accueil ».")};
+if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
 document.querySelector(".tabs").addEventListener("click",e=>{
   const m=e.target.dataset.mode;if(!m||m===S.mode)return;
   S.mode=m;if(m!=="dettes")D=S.modes[m];$("rech").value="";$("pan").classList.remove("open");save();render();scrollTo(0,0)});
