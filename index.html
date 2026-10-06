@@ -1,3 +1,10 @@
+<!--
+  Carnet des dépenses
+  © 2026 KOUESSI Houénoumadji François. Tous droits réservés.
+  Toute copie, redistribution, modification ou revente de cette
+  application, en tout ou partie, sans autorisation écrite préalable de
+  l'auteur, est interdite.
+-->
 <!doctype html>
 <html lang="fr">
 <head>
@@ -75,6 +82,7 @@ body:not(.dt) #vueDettes{display:none}
 .pan.open{display:flex}
 .pan input,.pan select{padding:10px;border:1px solid var(--ligne);border-radius:8px;font-size:16px;flex:1;min-width:130px;background:#fff}
 .pan label{font-size:14px;display:flex;align-items:center;gap:6px;width:100%}
+.pied{text-align:center;font-size:12px;color:#667;padding:18px 8px 4px}
 .toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;z-index:20;display:none}
 </style>
 </head>
@@ -109,6 +117,7 @@ body:not(.dt) #vueDettes{display:none}
   <div id="liste"></div>
   <h2 id="histo">Historique</h2>
   <div id="hist"></div>
+  <footer class="pied">© 2026 KOUESSI Houénoumadji François — Carnet des dépenses, tous droits réservés.</footer>
 </main>
 <datalist id="unites">
   <option value="bidon"><option value="boîte"><option value="bouteille"><option value="carton"><option value="g">
@@ -398,7 +407,7 @@ function construirePDF(lines,titre,dateIso,paie){
     text(M+10,y+23,reste>0?"RESTE À PAYER":"SOLDÉ",12,1,"ffffff");
     text(R-10,y+23,nf(Math.max(reste,0))+" FCFA",13,1,"ffffff","r");y+=44}
   text(M,y+14,lines.length+" produit"+(lines.length>1?"s":""),10,0,"667085");
-  pages.forEach((p,i)=>{p.push(`BT 0.4 0.44 0.52 rg /F1 9 Tf ${W/2-30} 24 Td (Page ${i+1} / ${pages.length}) Tj ET`)});
+  pages.forEach((p,i)=>{p.push(`BT 0.4 0.44 0.52 rg /F1 8 Tf ${M} 24 Td (${enc("© 2026 KOUESSI Houénoumadji François — Carnet des dépenses")}) Tj ET`);p.push(`BT 0.4 0.44 0.52 rg /F1 9 Tf ${W-M-sw("Page "+(i+1)+" / "+pages.length,9,0)} 24 Td (Page ${i+1} / ${pages.length}) Tj ET`)});
   return assembler(pages,W,H);
 }
 function assembler(pages,W,H){
@@ -515,7 +524,7 @@ function construirePDFDettes(L){
   const T=L.reduce((a,d)=>a+d.m,0),Pm=L.reduce((a,d)=>a+paye(d),0);
   rect(M,y+6,W-2*M,32,"14305e");text(M+10,y+27,"TOTAL",12,1,"ffffff");
   text(X[3]+75,y+27,nf(T),11,1,"ffffff","r");text(X[4]+75,y+27,nf(Pm),11,1,"ffffff","r");text(R-8,y+27,nf(Math.max(T-Pm,0)),11,1,"ffd54a","r");
-  pages.forEach((p,i)=>{p.push(`BT 0.4 0.44 0.52 rg /F1 9 Tf ${W/2-30} 24 Td (Page ${i+1} / ${pages.length}) Tj ET`)});
+  pages.forEach((p,i)=>{p.push(`BT 0.4 0.44 0.52 rg /F1 8 Tf ${M} 24 Td (${enc("© 2026 KOUESSI Houénoumadji François — Carnet des dépenses")}) Tj ET`);p.push(`BT 0.4 0.44 0.52 rg /F1 9 Tf ${W-M-sw("Page "+(i+1)+" / "+pages.length,9,0)} 24 Td (Page ${i+1} / ${pages.length}) Tj ET`)});
   return assembler(pages,W,H);
 }
 /* ---------- Partage de l'appli ---------- */

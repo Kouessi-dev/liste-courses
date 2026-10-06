@@ -1,5 +1,5 @@
 // Service worker : permet l'installation et l'usage sans connexion.
-const V = "courses-v4";
+const V = "courses-v5";
 const FICHIERS = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
