@@ -1,6 +1,6 @@
 {
-  "name": "Liste de courses",
-  "short_name": "Courses",
+  "name": "Carnet des dépenses",
+  "short_name": "Carnet",
   "description": "Courses, crédits et dettes avec totaux et PDF",
   "lang": "fr",
   "start_url": "./",

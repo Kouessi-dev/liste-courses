@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Liste de courses</title>
+<title>Carnet des dépenses</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#14305e">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Courses">
+<meta name="apple-mobile-web-app-title" content="Carnet des dépenses">
 <style>
 :root{--bleu:#14305e;--bleu2:#1d4a8a;--fond:#f3f5f9;--ligne:#dde3ee;--ok:#1f8a4c}
 *{box-sizing:border-box}
@@ -79,7 +79,7 @@ body:not(.dt) #vueDettes{display:none}
 </style>
 </head>
 <body>
-<header><h1 id="titre">🛒 Liste de courses</h1><span style="display:flex;gap:8px;align-items:center"><button id="install" style="display:none;background:#ffd54a;color:#14305e;font-weight:600;padding:6px 12px;border-radius:16px;font-size:14px">⬇ Installer</button><a href="#histo" id="lienHisto">Historique</a></span></header>
+<header><h1 id="titre">📒 Carnet des dépenses</h1><span style="display:flex;gap:8px;align-items:center"><button id="install" style="display:none;background:#ffd54a;color:#14305e;font-weight:600;padding:6px 12px;border-radius:16px;font-size:14px">⬇ Installer</button><a href="#histo" id="lienHisto">Historique</a></span></header>
 <div class="tabs"><button data-mode="courses">🛒 Courses</button><button data-mode="credits">💳 Crédits</button><button data-mode="dettes">🤝 Dettes</button></div>
 <div class="bar">
   <input id="rech" placeholder="Rechercher ou ajouter un produit…" autocomplete="off">
@@ -205,9 +205,9 @@ function render(){
   $("liste").innerHTML=h||'<div class="vide">Aucun produit. Appuyez sur « + Ajouter » pour créer « '+esc($("rech").value)+' ».</div>';
   document.body.classList.toggle("dt",S.mode==="dettes");
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("act",b.dataset.mode===S.mode));
-  if(S.mode==="dettes"){document.title=lab().t;$("titre").textContent=lab().ico+" "+lab().t;$("lienHisto").style.display="none";renderDettes();return}
+  if(S.mode==="dettes"){$("lienHisto").style.display="none";renderDettes();return}
   $("lienHisto").style.display="";
-  document.title=lab().t;$("titre").textContent=lab().ico+" "+lab().t;
+  
   $("nomListe").placeholder=lab().ph;$("histo").textContent=lab().h;
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("act",b.dataset.mode===S.mode));
   $("nomListe").value=D.cur.name||"";
