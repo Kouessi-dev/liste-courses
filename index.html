@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Liste de courses</title>
+<style>
+:root{--bleu:#14305e;--bleu2:#1d4a8a;--fond:#f3f5f9;--ligne:#dde3ee;--ok:#1f8a4c}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:var(--fond);color:#1b2433;padding-bottom:150px}
+header{background:var(--bleu);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+header h1{margin:0;font-size:20px}
+header a{color:#fff;background:#ffffff26;padding:6px 12px;border-radius:16px;text-decoration:none;font-size:14px}
+.bar{display:flex;gap:8px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--ligne);position:sticky;top:0;z-index:5}
+.bar input{flex:1;min-width:0;padding:10px;border:1px solid var(--ligne);border-radius:8px;font-size:16px}
+button{font:inherit;cursor:pointer;border:0;border-radius:8px;padding:10px 14px;background:var(--bleu2);color:#fff}
+button.sec{background:#e6ebf4;color:var(--bleu)}
+main{max-width:760px;margin:0 auto;padding:8px 12px}
+#nomListe{width:100%;padding:10px;border:1px solid var(--ligne);border-radius:8px;font-size:16px;margin:8px 0}
+.banner{background:#fff6dc;border:1px solid #ecd27a;border-radius:8px;padding:8px 12px;margin:8px 0;font-size:14px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--bleu2);margin:18px 4px 6px}
+.item{background:#fff;border:1px solid var(--ligne);border-radius:10px;margin-bottom:6px;padding:10px 12px}
+.item.on{border-color:var(--ok);background:#f2fbf5}
+.top{display:flex;align-items:center;gap:10px}
+.top input[type=checkbox]{width:24px;height:24px;flex:none}
+.top label{flex:1;font-size:17px;cursor:pointer}
+.top .lt{font-weight:600;color:var(--ok);white-space:nowrap}
+.x{background:none;color:#999;padding:2px 8px;font-size:18px}
+.det{display:none;gap:10px;margin-top:8px;align-items:flex-end;flex-wrap:wrap}
+.item.on .det{display:flex}
+.det>div{display:flex;flex-direction:column;font-size:12px;color:#556;gap:2px}
+.det input{padding:8px;border:1px solid var(--ligne);border-radius:8px;font-size:16px}
+.qte{flex-direction:row!important;align-items:center;gap:4px!important}
+.qte input[type=number]{width:62px;text-align:center}
+.qte input[data-u]{width:96px}
+.qte button{padding:8px 12px}
+.pu{width:130px}
+.vide{text-align:center;color:#778;padding:20px}
+.total{position:fixed;left:0;right:0;bottom:0;background:var(--bleu);color:#fff;padding:10px 16px;z-index:9}
+.total .l1{display:flex;justify-content:space-between;align-items:baseline}
+.total strong{font-size:22px}
+.total .btns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.total button{background:#fff;color:var(--bleu);font-weight:600;padding:9px 12px;flex:1;white-space:nowrap}
+.total button.pdf{background:#ffd54a}
+.hist{background:#fff;border:1px solid var(--ligne);border-radius:10px;margin-bottom:8px;padding:10px 12px}
+.hist .t{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.hist .m{font-size:13px;color:#667;margin:2px 0 8px}
+.hist .a{display:flex;gap:6px;flex-wrap:wrap}
+.hist .a button{padding:7px 10px;font-size:14px}
+.hist table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}
+.hist td,.hist th{border-bottom:1px solid var(--ligne);padding:4px;text-align:left}
+.hist .r{text-align:right}
+.pan{background:#fff;border-bottom:1px solid var(--ligne);padding:10px 16px;display:none;gap:8px;flex-wrap:wrap}
+.pan.open{display:flex}
+.pan input,.pan select{padding:10px;border:1px solid var(--ligne);border-radius:8px;font-size:16px;flex:1;min-width:130px;background:#fff}
+.pan label{font-size:14px;display:flex;align-items:center;gap:6px;width:100%}
+.toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;z-index:20;display:none}
+</style>
+</head>
+<body>
+<header><h1>🛒 Liste de courses</h1><a href="#histo" id="lienHisto">Historique</a></header>
+<div class="bar">
+  <input id="rech" placeholder="Rechercher ou ajouter un produit…" autocomplete="off">
+  <button id="ajout">+ Ajouter</button>
+</div>
+<div class="pan" id="pan">
+  <input id="aNom" placeholder="Nom du produit">
+  <select id="aCat"></select>
+  <input id="aNew" placeholder="Nom du nouveau rayon" style="display:none">
+  <input id="aU" list="unites" placeholder="Unité habituelle (facultatif)">
+  <label><input type="checkbox" id="aCoche" checked style="flex:none;min-width:0"> Cocher aussitôt</label>
+  <button id="aOk">Ajouter à la liste</button><button class="sec" id="aFerme">Fermer</button>
+</div>
+<main>
+  <div id="banner"></div>
+  <input id="nomListe" placeholder="Nom de la liste (facultatif) — ex. Marché de la semaine">
+  <div id="liste"></div>
+  <h2 id="histo">Historique des listes</h2>
+  <div id="hist"></div>
+</main>
+<datalist id="unites">
+  <option value="sac"><option value="carton"><option value="paquet"><option value="boîte"><option value="bouteille">
+  <option value="L"><option value="kg"><option value="g"><option value="pièce"><option value="tas"><option value="bidon"><option value="sachet"><option value="lot">
+</datalist>
+<div class="toast" id="toast"></div>
+<div class="total">
+  <div class="l1"><span id="nb" style="font-size:13px;opacity:.85"></span><strong id="tot"></strong></div>
+  <div class="btns">
+    <button class="pdf" id="pdf">⬇ PDF</button>
+    <button id="csv">Excel</button>
+    <button id="save">💾 Enregistrer</button>
+    <button id="raz">Nouvelle liste</button>
+  </div>
+</div>
+<script>
+const CATS={
+ "Céréales & féculents":["Riz","Maïs","Farine de maïs","Gari","Pâtes (spaghetti)","Igname","Manioc","Pain"],
+ "Condiments & huiles":["Huile","Tomate concentrée","Sel","Sucre","Piment","Oignon","Ail","Cube Maggi","Moutarde","Mayonnaise"],
+ "Protéines":["Poisson","Poulet","Viande de bœuf","Œufs","Haricot","Sardines (boîte)"],
+ "Légumes & fruits":["Tomate fraîche","Carotte","Chou","Poivron","Banane","Orange","Ananas"],
+ "Boissons & petit-déjeuner":["Lait en poudre","Café","Thé","Chocolat en poudre","Eau (pack)","Jus"],
+ "Entretien & hygiène":["Savon","Lessive","Eau de javel","Papier hygiénique","Dentifrice","Huile de bain"]
+};
+const K="listeCourses.v2";
+let S;
+try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
+if(!S){S={items:[],hist:[],cur:{id:null}};let n=0;
+  for(const c in CATS)CATS[c].forEach(p=>S.items.push({id:++n,cat:c,nom:p,on:false,q:1,u:"",pu:""}));S.next=n+1}
+/* Produits issus de la liste manuscrite (ajoutés une seule fois aux installations existantes) */
+const EXTRA={
+ "Céréales & féculents":["Mil","Arachide","Sésame","Pois d'angole","Coquillettes"],
+ "Condiments & huiles":["Huile rouge","Huile d'arachide","Huile de coco","Huile palmiste","Piment vert","Piment en poudre","Piment sec","Pâte d'arachide","Aye"],
+ "Protéines":["Viande"],
+ "Légumes & fruits":["Pastèque"],
+ "Entretien & hygiène":["Pomade","Brosse","Pâte à dent"],
+ "Habillement":["Chaussure","Pagne simple","Bazin","Good Luck","Le dessous"],
+ "Maison":["Bol","Glacière","Bassine","Rideau"]
+};
+if(!S.extra1){
+  for(const c in EXTRA)EXTRA[c].forEach(p=>{
+    if(!S.items.some(i=>i.nom.toLowerCase()===p.toLowerCase()))S.items.push({id:S.next++,cat:c,nom:p,on:false,q:1,u:"",pu:""})});
+  S.extra1=1;try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}
+}
+if(!S.extra2){ // corrections : Cokiette → Coquillettes (pâte alimentaire), Basin → Bazin
+  const REN={"cokiette":["Coquillettes","Céréales & féculents"],"basin":["Bazin",null]};
+  const fix=o=>{const r=REN[o.nom.toLowerCase()];if(r)o.nom=r[0];return r};
+  S.items.forEach(i=>{const r=fix(i);if(r&&r[1])i.cat=r[1]});
+  (S.hist||[]).forEach(h=>h.lines.forEach(fix));
+  S.extra2=1;try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}
+}
+const $=id=>document.getElementById(id);
+const nf=n=>Math.round(n).toLocaleString("fr-FR").replace(/[  ]/g," ");
+const fmt=n=>nf(n)+" FCFA";
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const ligne=i=>(+i.q||0)*(+i.pu||0);
+const qtxt=i=>(+i.q||0)+(i.u?" "+i.u:"");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const dfr=iso=>new Date(iso).toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
+function toast(t){const e=$("toast");e.textContent=t;e.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display="none",2200)}
+
+function render(){
+  const f=$("rech").value.trim().toLowerCase();
+  let h="";const cats=[...new Set(S.items.map(i=>i.cat))];
+  cats.forEach(c=>{
+    const its=S.items.filter(i=>i.cat===c&&(!f||i.nom.toLowerCase().includes(f)));
+    if(!its.length)return;
+    h+=`<h2>${esc(c)}</h2>`;
+    its.forEach(i=>{h+=`<div class="item ${i.on?"on":""}" data-id="${i.id}">
+      <div class="top"><input type="checkbox" id="c${i.id}" ${i.on?"checked":""}>
+      <label for="c${i.id}">${esc(i.nom)}</label>
+      <span class="lt" id="l${i.id}">${i.on&&ligne(i)?fmt(ligne(i)):""}</span>
+      <button class="x" data-edit title="Renommer">✎</button><button class="x" data-del title="Supprimer">×</button></div>
+      <div class="det">
+        <div>Quantité<span class="qte"><button class="sec" data-m>−</button><input type="number" inputmode="decimal" min="0" step="any" value="${i.q}" data-q><button class="sec" data-p>+</button><input type="text" list="unites" value="${esc(i.u||"")}" data-u placeholder="unité"></span></div>
+        <div><span id="pl${i.id}">${plabel(i)}</span><input class="pu" type="number" inputmode="decimal" min="0" step="any" value="${i.pu}" data-pu placeholder="0"></div>
+      </div></div>`});
+  });
+  $("liste").innerHTML=h||'<div class="vide">Aucun produit. Appuyez sur « + Ajouter » pour créer « '+esc($("rech").value)+' ».</div>';
+  $("nomListe").value=S.cur.name||"";
+  $("banner").innerHTML=S.cur.id?'<div class="banner">✏️ Vous complétez une liste de l\'historique. « Enregistrer » la mettra à jour.</div>':"";
+  totaux();renderHist();
+}
+const plabel=i=>"Prix par "+(i.u?esc(i.u):"unité")+" (FCFA)";
+function totaux(){
+  const on=S.items.filter(i=>i.on);
+  $("nb").textContent=on.length+" produit"+(on.length>1?"s":"")+" coché"+(on.length>1?"s":"");
+  $("tot").textContent=fmt(on.reduce((a,i)=>a+ligne(i),0));
+}
+function renderHist(){
+  $("lienHisto").textContent="Historique ("+S.hist.length+")";
+  $("hist").innerHTML=S.hist.length?S.hist.map(e=>`<div class="hist" data-h="${e.id}">
+    <div class="t"><span>${esc(e.name||"Liste du "+dfr(e.date))}</span><span>${fmt(e.total)}</span></div>
+    <div class="m">${dfr(e.date)} · ${e.lines.length} produit${e.lines.length>1?"s":""}</div>
+    <div class="a"><button class="sec" data-act="voir">Détail</button><button class="sec" data-act="rouvrir">Compléter</button><button data-act="pdf">PDF</button><button class="sec" data-act="sup" style="color:#b3261e">Supprimer</button></div>
+    <div data-detail></div></div>`).join(""):'<div class="vide">Aucune liste enregistrée pour le moment. Cochez vos produits puis appuyez sur « Enregistrer ».</div>';
+}
+const get=e=>S.items.find(i=>i.id==e.target.closest(".item").dataset.id);
+function maj(i){const l=$("l"+i.id);if(l)l.textContent=i.on&&ligne(i)?fmt(ligne(i)):"";totaux();save()}
+$("liste").addEventListener("change",e=>{
+  if(e.target.type==="checkbox"){const i=get(e);i.on=e.target.checked;e.target.closest(".item").classList.toggle("on",i.on);maj(i);
+    if(i.on&&!i.pu){const p=e.target.closest(".item").querySelector("[data-pu]");setTimeout(()=>p.focus(),50)}}
+});
+$("liste").addEventListener("input",e=>{
+  const i=get(e),d=e.target.dataset;
+  if(d.q!==undefined)i.q=e.target.value;
+  else if(d.pu!==undefined)i.pu=e.target.value;
+  else if(d.u!==undefined){i.u=e.target.value.trim();$("pl"+i.id).textContent="Prix par "+(i.u||"unité")+" (FCFA)"}
+  else return;maj(i)
+});
+$("liste").addEventListener("click",e=>{
+  const t=e.target;
+  if(t.dataset.m!==undefined||t.dataset.p!==undefined){const i=get(e);
+    i.q=Math.max(0,(+i.q||0)+(t.dataset.p!==undefined?1:-1));
+    t.parentNode.querySelector("[data-q]").value=i.q;maj(i)}
+  if(t.dataset.edit!==undefined){const i=get(e);const n=prompt('Nouveau nom du produit :',i.nom);
+    if(n&&n.trim()){i.nom=n.trim();save();render()}}
+  if(t.dataset.del!==undefined){const i=get(e);if(confirm("Supprimer « "+i.nom+" » du catalogue ?")){S.items=S.items.filter(x=>x!==i);save();render()}}
+});
+$("rech").addEventListener("input",render);
+$("nomListe").addEventListener("input",e=>{S.cur.name=e.target.value;save()});
+function majRayons(){
+  const cats=[...new Set(S.items.map(i=>i.cat))];
+  $("aCat").innerHTML=cats.map(c=>`<option>${esc(c)}</option>`).join("")+'<option value="__new">+ Nouveau rayon…</option>';
+  $("aNew").style.display="none";
+}
+function ouvrirAjout(){
+  const p=$("pan");
+  if(p.classList.contains("open")&&!$("rech").value.trim()){p.classList.remove("open");return}
+  majRayons();p.classList.add("open");$("aNom").value=$("rech").value.trim();$("aNom").focus();
+}
+$("aCat").onchange=()=>{const n=$("aCat").value==="__new";$("aNew").style.display=n?"":"none";if(n)$("aNew").focus()};
+function ajouter(){
+  const nom=$("aNom").value.trim();if(!nom)return $("aNom").focus();
+  let cat=$("aCat").value;if(cat==="__new")cat=$("aNew").value.trim();
+  if(!cat)return $("aNew").focus();
+  if(S.items.some(i=>i.nom.toLowerCase()===nom.toLowerCase())){alert("Ce produit existe déjà.");return}
+  S.items.push({id:S.next++,cat,nom,on:$("aCoche").checked,q:1,u:$("aU").value.trim(),pu:""});
+  save();$("rech").value="";$("aNom").value="";$("aU").value="";majRayons();$("aCat").value=cat;
+  render();toast("« "+nom+" » ajouté au rayon "+cat);$("aNom").focus();
+}
+$("ajout").onclick=ouvrirAjout;$("aOk").onclick=ajouter;
+$("aFerme").onclick=()=>$("pan").classList.remove("open");
+$("aNom").addEventListener("keydown",e=>{if(e.key==="Enter")ajouter()});
+$("rech").addEventListener("keydown",e=>{if(e.key==="Enter"){const f=$("rech").value.trim().toLowerCase();
+  if(f&&!S.items.some(i=>i.nom.toLowerCase().includes(f)))ouvrirAjout()}});
+
+function choisis(){return S.items.filter(i=>i.on)}
+const lignes=()=>choisis().map(i=>({nom:i.nom,q:+i.q||0,u:i.u||"",pu:+i.pu||0,total:ligne(i)}));
+const somme=l=>l.reduce((a,x)=>a+x.total,0);
+
+function enregistrer(){
+  const l=lignes();if(!l.length)return alert("Cochez d'abord au moins un produit.");
+  const nom=(S.cur.name||"").trim();
+  const ex=S.cur.id&&S.hist.find(h=>h.id===S.cur.id);
+  if(ex){ex.lines=l;ex.total=somme(l);ex.name=nom}
+  else{const e={id:Date.now(),date:new Date().toISOString(),name:nom,lines:l,total:somme(l)};S.hist.unshift(e);S.cur.id=e.id}
+  save();render();toast("Liste enregistrée dans l'historique");
+}
+$("save").onclick=enregistrer;
+$("raz").onclick=()=>{
+  if(choisis().length&&!confirm("Commencer une nouvelle liste ?\nLes quantités et prix actuels seront effacés (pensez à Enregistrer avant)."))return;
+  S.items.forEach(i=>{i.on=false;i.q=1;i.u="";i.pu=""});S.cur={id:null,name:""};save();render();scrollTo(0,0)
+};
+$("hist").addEventListener("click",e=>{
+  const act=e.target.dataset.act;if(!act)return;
+  const box=e.target.closest(".hist"),h=S.hist.find(x=>x.id==box.dataset.h);
+  if(act==="voir"){const d=box.querySelector("[data-detail]");
+    d.innerHTML=d.innerHTML?"":`<table><tr><th>Produit</th><th>Qté</th><th class="r">P.U.</th><th class="r">Total</th></tr>`+
+      h.lines.map(x=>`<tr><td>${esc(x.nom)}</td><td>${esc(qtxt(x))}</td><td class="r">${nf(x.pu)}</td><td class="r">${nf(x.total)}</td></tr>`).join("")+`</table>`}
+  if(act==="pdf")telechargerPDF(h.lines,h.name||"Liste du "+dfr(h.date),h.date);
+  if(act==="sup"&&confirm("Supprimer cette liste de l'historique ?")){S.hist=S.hist.filter(x=>x!==h);if(S.cur.id===h.id)S.cur.id=null;save();render()}
+  if(act==="rouvrir"){
+    if(choisis().length&&!confirm("Remplacer la liste en cours par celle-ci pour la compléter ?"))return;
+    S.items.forEach(i=>{i.on=false;i.q=1;i.u="";i.pu=""});
+    h.lines.forEach(x=>{let i=S.items.find(i=>i.nom.toLowerCase()===x.nom.toLowerCase());
+      if(!i){i={id:S.next++,cat:"Mes produits",nom:x.nom};S.items.unshift(i)}
+      Object.assign(i,{on:true,q:x.q,u:x.u,pu:x.pu||""})});
+    S.cur={id:h.id,name:h.name||""};save();render();scrollTo(0,0);toast("Liste rouverte : ajoutez des produits")
+  }
+});
+
+/* ---------- Excel (CSV) ---------- */
+$("csv").onclick=()=>{
+  const l=lignes();if(!l.length)return alert("Cochez d'abord au moins un produit.");
+  const q=s=>'"'+String(s).replace(/"/g,'""')+'"',num=n=>String(n).replace(".",",");
+  let t="Produit;Quantité;Unité;Prix unitaire (FCFA);Total (FCFA)\r\n";
+  l.forEach(x=>t+=[q(x.nom),num(x.q),q(x.u),num(x.pu),num(x.total)].join(";")+"\r\n");
+  t+=";;;TOTAL;"+num(somme(l))+"\r\n";
+  save_(new Blob(["﻿"+t],{type:"text/csv;charset=utf-8"}),"liste-courses-"+new Date().toISOString().slice(0,10)+".csv");
+};
+function save_(blob,nom){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=nom;document.body.appendChild(a);a.click();a.remove()}
+
+/* ---------- PDF (généré sans bibliothèque) ---------- */
+const WR="278 278 355 556 556 889 667 191 333 333 389 584 278 333 278 278 556 556 556 556 556 556 556 556 556 556 278 278 584 584 584 556 1015 667 667 722 722 667 611 778 722 278 500 667 556 833 722 778 667 778 722 667 611 722 667 944 667 667 611 278 278 278 469 556 333 556 556 500 556 556 278 556 556 222 222 500 222 833 556 556 556 556 333 500 278 556 500 722 500 500 500 334 260 334 584".split(" ").map(Number);
+const WB="278 333 474 556 556 889 722 238 333 333 389 584 278 333 278 278 556 556 556 556 556 556 556 556 556 556 333 333 584 584 584 611 975 722 722 722 722 667 611 778 722 278 556 722 611 833 722 778 667 778 722 667 611 722 667 944 667 667 611 333 278 333 584 556 333 556 611 556 611 556 333 611 611 278 278 556 278 889 611 611 611 611 389 556 333 611 556 778 556 556 500 389 280 389 584".split(" ").map(Number);
+const base=ch=>ch.normalize("NFD").replace(/[̀-ͯ]/g,"");
+function sw(s,size,bold){let w=0;for(const ch of s){const b=base(ch).charCodeAt(0);w+=((b>=32&&b<=126)?(bold?WB:WR)[b-32]:600)}return w*size/1000}
+const WIN={"œ":0x9c,"Œ":0x8c,"€":0x80,"’":0x92,"‘":0x91,"—":0x97,"–":0x96,"…":0x85};
+function enc(s){let o="";for(const ch of s){const c=ch.charCodeAt(0);let b=WIN[ch]||(c<256?c:63);const x=String.fromCharCode(b);o+=(x==="("||x===")"||x==="\\")?"\\"+x:x}return o}
+function fit(s,w,size,bold){if(sw(s,size,bold)<=w)return s;while(s.length>1&&sw(s+"...",size,bold)>w)s=s.slice(0,-1);return s+"..."}
+
+function construirePDF(lines,titre,dateIso){
+  const W=595,H=842,M=40,pages=[];let P,y;
+  const col=h=>(h.match(/\w\w/g).map(x=>(parseInt(x,16)/255).toFixed(3))).join(" ");
+  const rect=(x,yy,w,h,c)=>P.push(`${col(c)} rg ${x} ${H-yy-h} ${w} ${h} re f`);
+  const text=(x,yy,s,size,bold,c,al)=>{const w=sw(s,size,bold);if(al==="r")x-=w;else if(al==="c")x-=w/2;
+    P.push(`BT ${col(c)} rg /${bold?"F2":"F1"} ${size} Tf ${x.toFixed(2)} ${(H-yy).toFixed(2)} Td (${enc(s)}) Tj ET`)};
+  const hline=(yy,c)=>P.push(`${col(c)} RG 0.5 w ${M} ${H-yy} m ${W-M} ${H-yy} l S`);
+  const X=[M,M+30,M+240,M+345,M+430],R=W-M; // colonnes
+  const entete=()=>{rect(M,y,W-2*M,24,"1d4a8a");
+    text(X[0]+6,y+16,"N°",10,1,"ffffff");text(X[1]+6,y+16,"Produit",10,1,"ffffff");
+    text(X[3]-8,y+16,"Quantité",10,1,"ffffff","r");text(X[4]-8,y+16,"Prix unit. (FCFA)",10,1,"ffffff","r");text(R-8,y+16,"Total (FCFA)",10,1,"ffffff","r");y+=24};
+  const nouvelle=(prem)=>{P=[];pages.push(P);
+    if(prem){rect(0,0,W,96,"14305e");text(M,44,"Liste de courses",24,1,"ffffff");
+      text(M,68,fit(titre,W-2*M,12,0),12,0,"cfd9ee");text(W-M,68,dfr(dateIso),12,0,"cfd9ee","r");y=118}
+    else{rect(0,0,W,40,"14305e");text(M,26,"Liste de courses — "+fit(titre,300,11,0),11,1,"ffffff");y=60}
+    entete()};
+  nouvelle(true);
+  lines.forEach((x,n)=>{
+    if(y+24>H-70){nouvelle(false)}
+    if(n%2===0)rect(M,y,W-2*M,24,"f1f4fa");
+    text(X[0]+6,y+16,String(n+1),10,0,"667085");
+    text(X[1]+6,y+16,fit(x.nom,X[2]-X[1]+50,11,0),11,0,"1b2433");
+    text(X[3]-8,y+16,fit(((+x.q)||0)+(x.u?" "+x.u:""),X[3]-X[2]-4,11,0),11,0,"1b2433","r");
+    text(X[4]-8,y+16,nf(x.pu),11,0,"1b2433","r");
+    text(R-8,y+16,nf(x.total),11,1,"1b2433","r");
+    y+=24;
+  });
+  hline(y,"9aa5b8");
+  if(y+40>H-60)nouvelle(false);
+  rect(M,y+6,W-2*M,32,"14305e");
+  text(M+10,y+27,"TOTAL GÉNÉRAL",12,1,"ffffff");
+  text(R-10,y+27,nf(somme(lines))+" FCFA",14,1,"ffd54a","r");
+  y+=44;text(M,y+14,lines.length+" produit"+(lines.length>1?"s":""),10,0,"667085");
+  pages.forEach((p,i)=>{p.push(`BT 0.4 0.44 0.52 rg /F1 9 Tf ${W/2-30} 24 Td (Page ${i+1} / ${pages.length}) Tj ET`)});
+  // assemblage
+  const objs=[];const add=s=>(objs.push(s),objs.length);
+  add("<< /Type /Catalog /Pages 2 0 R >>");add("");
+  add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+  add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+  const kids=[];
+  pages.forEach(p=>{const c=p.join("\n");const ci=add(`<< /Length ${c.length} >>\nstream\n${c}\nendstream`);
+    kids.push(add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${ci} 0 R >>`)+" 0 R")});
+  objs[1]=`<< /Type /Pages /Count ${kids.length} /Kids [${kids.join(" ")}] >>`;
+  let out="%PDF-1.4\n",off=[];
+  objs.forEach((o,i)=>{off.push(out.length);out+=`${i+1} 0 obj\n${o}\nendobj\n`});
+  const xr=out.length;
+  out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+off.map(o=>String(o).padStart(10,"0")+" 00000 n \n").join("")+
+    `trailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF`;
+  const u=new Uint8Array(out.length);for(let i=0;i<out.length;i++)u[i]=out.charCodeAt(i)&255;
+  return new Blob([u],{type:"application/pdf"});
+}
+function telechargerPDF(lines,titre,dateIso){
+  if(!lines.length)return alert("Cochez d'abord au moins un produit.");
+  save_(construirePDF(lines,titre,dateIso),"liste-courses-"+new Date(dateIso).toISOString().slice(0,10)+".pdf");
+}
+$("pdf").onclick=()=>telechargerPDF(lignes(),(S.cur.name||"").trim()||"Liste du "+dfr(new Date().toISOString()),
+  S.cur.id&&S.hist.find(h=>h.id===S.cur.id)?S.hist.find(h=>h.id===S.cur.id).date:new Date().toISOString());
+render();
+</script>
+</body>
+</html>
