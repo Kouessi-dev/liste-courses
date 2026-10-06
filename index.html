@@ -50,6 +50,11 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--bleu
 .hist table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}
 .hist td,.hist th{border-bottom:1px solid var(--ligne);padding:4px;text-align:left}
 .hist .r{text-align:right}
+.tabs{display:flex;background:var(--bleu);padding:0 12px;gap:6px}
+.tabs button{flex:1;background:#ffffff1f;color:#fff;border-radius:10px 10px 0 0;padding:11px;font-weight:600;font-size:16px}
+.tabs button.act{background:var(--fond);color:var(--bleu)}
+.cumul{background:var(--bleu);color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline}
+.cumul strong{font-size:20px}
 .pan{background:#fff;border-bottom:1px solid var(--ligne);padding:10px 16px;display:none;gap:8px;flex-wrap:wrap}
 .pan.open{display:flex}
 .pan input,.pan select{padding:10px;border:1px solid var(--ligne);border-radius:8px;font-size:16px;flex:1;min-width:130px;background:#fff}
@@ -58,7 +63,8 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--bleu
 </style>
 </head>
 <body>
-<header><h1>🛒 Liste de courses</h1><a href="#histo" id="lienHisto">Historique</a></header>
+<header><h1 id="titre">🛒 Liste de courses</h1><a href="#histo" id="lienHisto">Historique</a></header>
+<div class="tabs"><button data-mode="courses">🛒 Courses</button><button data-mode="credits">💳 Crédits</button></div>
 <div class="bar">
   <input id="rech" placeholder="Rechercher ou ajouter un produit…" autocomplete="off">
   <button id="ajout">+ Ajouter</button>
@@ -75,7 +81,7 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--bleu
   <div id="banner"></div>
   <input id="nomListe" placeholder="Nom de la liste (facultatif) — ex. Marché de la semaine">
   <div id="liste"></div>
-  <h2 id="histo">Historique des listes</h2>
+  <h2 id="histo">Historique</h2>
   <div id="hist"></div>
 </main>
 <datalist id="unites">
@@ -128,6 +134,18 @@ if(!S.extra2){ // corrections : Cokiette → Coquillettes (pâte alimentaire), B
   (S.hist||[]).forEach(h=>h.lines.forEach(fix));
   S.extra2=1;try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}
 }
+if(!S.modes){ // 2 onglets : Courses / Crédits (mêmes produits, listes et historiques séparés)
+  S.modes={courses:{items:S.items,hist:S.hist||[],cur:S.cur||{id:null}},
+    credits:{items:S.items.map(i=>({id:i.id,cat:i.cat,nom:i.nom,on:false,q:1,u:"",pu:""})),hist:[],cur:{id:null}}};
+  S.mode="courses";delete S.items;delete S.hist;delete S.cur;
+  try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}
+}
+let D=S.modes[S.mode];
+const LAB={courses:{t:"Liste de courses",ico:"🛒",f:"liste-courses-",ph:"Nom de la liste (facultatif) — ex. Marché de la semaine",h:"Historique des courses"},
+  credits:{t:"Liste de crédits",ico:"💳",f:"liste-credits-",ph:"Nom (facultatif) — ex. Crédit chez Mme X",h:"Historique des crédits"}};
+const lab=()=>LAB[S.mode];
+const autre=()=>S.modes[S.mode==="courses"?"credits":"courses"];
+function miroir(i){const o=autre();if(!o.items.some(x=>x.id===i.id))o.items.push({id:i.id,cat:i.cat,nom:i.nom,on:false,q:1,u:"",pu:""})}
 const $=id=>document.getElementById(id);
 const nf=n=>Math.round(n).toLocaleString("fr-FR").replace(/[  ]/g," ");
 const fmt=n=>nf(n)+" FCFA";
@@ -140,9 +158,9 @@ function toast(t){const e=$("toast");e.textContent=t;e.style.display="block";cle
 
 function render(){
   const f=$("rech").value.trim().toLowerCase();
-  let h="";const cats=[...new Set(S.items.map(i=>i.cat))];
+  let h="";const cats=[...new Set(D.items.map(i=>i.cat))];
   cats.forEach(c=>{
-    const its=S.items.filter(i=>i.cat===c&&(!f||i.nom.toLowerCase().includes(f)));
+    const its=D.items.filter(i=>i.cat===c&&(!f||i.nom.toLowerCase().includes(f)));
     if(!its.length)return;
     h+=`<h2>${esc(c)}</h2>`;
     its.forEach(i=>{h+=`<div class="item ${i.on?"on":""}" data-id="${i.id}">
@@ -156,25 +174,29 @@ function render(){
       </div></div>`});
   });
   $("liste").innerHTML=h||'<div class="vide">Aucun produit. Appuyez sur « + Ajouter » pour créer « '+esc($("rech").value)+' ».</div>';
-  $("nomListe").value=S.cur.name||"";
-  $("banner").innerHTML=S.cur.id?'<div class="banner">✏️ Vous complétez une liste de l\'historique. « Enregistrer » la mettra à jour.</div>':"";
+  document.title=lab().t;$("titre").textContent=lab().ico+" "+lab().t;
+  $("nomListe").placeholder=lab().ph;$("histo").textContent=lab().h;
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("act",b.dataset.mode===S.mode));
+  $("nomListe").value=D.cur.name||"";
+  $("banner").innerHTML=D.cur.id?'<div class="banner">✏️ Vous complétez une liste de l\'historique. « Enregistrer » la mettra à jour.</div>':"";
   totaux();renderHist();
 }
 const plabel=i=>"Prix par "+(i.u?esc(i.u):"unité")+" (FCFA)";
 function totaux(){
-  const on=S.items.filter(i=>i.on);
+  const on=D.items.filter(i=>i.on);
   $("nb").textContent=on.length+" produit"+(on.length>1?"s":"")+" coché"+(on.length>1?"s":"");
   $("tot").textContent=fmt(on.reduce((a,i)=>a+ligne(i),0));
 }
 function renderHist(){
-  $("lienHisto").textContent="Historique ("+S.hist.length+")";
-  $("hist").innerHTML=S.hist.length?S.hist.map(e=>`<div class="hist" data-h="${e.id}">
+  $("lienHisto").textContent="Historique ("+D.hist.length+")";
+  const cum=D.hist.length?`<div class="cumul"><span>Total cumulé · ${D.hist.length} liste${D.hist.length>1?"s":""}</span><strong>${fmt(D.hist.reduce((a,e)=>a+e.total,0))}</strong></div>`:"";
+  $("hist").innerHTML=cum+(D.hist.length?D.hist.map(e=>`<div class="hist" data-h="${e.id}">
     <div class="t"><span>${esc(e.name||"Liste du "+dfr(e.date))}</span><span>${fmt(e.total)}</span></div>
     <div class="m">${dfr(e.date)} · ${e.lines.length} produit${e.lines.length>1?"s":""}</div>
     <div class="a"><button class="sec" data-act="voir">Détail</button><button class="sec" data-act="rouvrir">Compléter</button><button data-act="pdf">PDF</button><button class="sec" data-act="sup" style="color:#b3261e">Supprimer</button></div>
-    <div data-detail></div></div>`).join(""):'<div class="vide">Aucune liste enregistrée pour le moment. Cochez vos produits puis appuyez sur « Enregistrer ».</div>';
+    <div data-detail></div></div>`).join(""):'<div class="vide">Aucune liste enregistrée pour le moment. Cochez vos produits puis appuyez sur « Enregistrer ».</div>');
 }
-const get=e=>S.items.find(i=>i.id==e.target.closest(".item").dataset.id);
+const get=e=>D.items.find(i=>i.id==e.target.closest(".item").dataset.id);
 function maj(i){const l=$("l"+i.id);if(l)l.textContent=i.on&&ligne(i)?fmt(ligne(i)):"";totaux();save()}
 $("liste").addEventListener("change",e=>{
   if(e.target.type==="checkbox"){const i=get(e);i.on=e.target.checked;e.target.closest(".item").classList.toggle("on",i.on);maj(i);
@@ -193,13 +215,13 @@ $("liste").addEventListener("click",e=>{
     i.q=Math.max(0,(+i.q||0)+(t.dataset.p!==undefined?1:-1));
     t.parentNode.querySelector("[data-q]").value=i.q;maj(i)}
   if(t.dataset.edit!==undefined){const i=get(e);const n=prompt('Nouveau nom du produit :',i.nom);
-    if(n&&n.trim()){i.nom=n.trim();save();render()}}
-  if(t.dataset.del!==undefined){const i=get(e);if(confirm("Supprimer « "+i.nom+" » du catalogue ?")){S.items=S.items.filter(x=>x!==i);save();render()}}
+    if(n&&n.trim()){i.nom=n.trim();const o=autre().items.find(x=>x.id===i.id);if(o)o.nom=i.nom;save();render()}}
+  if(t.dataset.del!==undefined){const i=get(e);if(confirm("Supprimer « "+i.nom+" » du catalogue ?")){D.items=D.items.filter(x=>x!==i);autre().items=autre().items.filter(x=>x.id!==i.id);save();render()}}
 });
 $("rech").addEventListener("input",render);
-$("nomListe").addEventListener("input",e=>{S.cur.name=e.target.value;save()});
+$("nomListe").addEventListener("input",e=>{D.cur.name=e.target.value;save()});
 function majRayons(){
-  const cats=[...new Set(S.items.map(i=>i.cat))];
+  const cats=[...new Set(D.items.map(i=>i.cat))];
   $("aCat").innerHTML=cats.map(c=>`<option>${esc(c)}</option>`).join("")+'<option value="__new">+ Nouveau rayon…</option>';
   $("aNew").style.display="none";
 }
@@ -213,8 +235,8 @@ function ajouter(){
   const nom=$("aNom").value.trim();if(!nom)return $("aNom").focus();
   let cat=$("aCat").value;if(cat==="__new")cat=$("aNew").value.trim();
   if(!cat)return $("aNew").focus();
-  if(S.items.some(i=>i.nom.toLowerCase()===nom.toLowerCase())){alert("Ce produit existe déjà.");return}
-  S.items.push({id:S.next++,cat,nom,on:$("aCoche").checked,q:1,u:$("aU").value.trim(),pu:""});
+  if(D.items.some(i=>i.nom.toLowerCase()===nom.toLowerCase())){alert("Ce produit existe déjà.");return}
+  const ni={id:S.next++,cat,nom,on:$("aCoche").checked,q:1,u:$("aU").value.trim(),pu:""};D.items.push(ni);miroir(ni);
   save();$("rech").value="";$("aNom").value="";$("aU").value="";majRayons();$("aCat").value=cat;
   render();toast("« "+nom+" » ajouté au rayon "+cat);$("aNom").focus();
 }
@@ -222,40 +244,40 @@ $("ajout").onclick=ouvrirAjout;$("aOk").onclick=ajouter;
 $("aFerme").onclick=()=>$("pan").classList.remove("open");
 $("aNom").addEventListener("keydown",e=>{if(e.key==="Enter")ajouter()});
 $("rech").addEventListener("keydown",e=>{if(e.key==="Enter"){const f=$("rech").value.trim().toLowerCase();
-  if(f&&!S.items.some(i=>i.nom.toLowerCase().includes(f)))ouvrirAjout()}});
+  if(f&&!D.items.some(i=>i.nom.toLowerCase().includes(f)))ouvrirAjout()}});
 
-function choisis(){return S.items.filter(i=>i.on)}
+function choisis(){return D.items.filter(i=>i.on)}
 const lignes=()=>choisis().map(i=>({nom:i.nom,q:+i.q||0,u:i.u||"",pu:+i.pu||0,total:ligne(i)}));
 const somme=l=>l.reduce((a,x)=>a+x.total,0);
 
 function enregistrer(){
   const l=lignes();if(!l.length)return alert("Cochez d'abord au moins un produit.");
-  const nom=(S.cur.name||"").trim();
-  const ex=S.cur.id&&S.hist.find(h=>h.id===S.cur.id);
+  const nom=(D.cur.name||"").trim();
+  const ex=D.cur.id&&D.hist.find(h=>h.id===D.cur.id);
   if(ex){ex.lines=l;ex.total=somme(l);ex.name=nom}
-  else{const e={id:Date.now(),date:new Date().toISOString(),name:nom,lines:l,total:somme(l)};S.hist.unshift(e);S.cur.id=e.id}
+  else{const e={id:Date.now(),date:new Date().toISOString(),name:nom,lines:l,total:somme(l)};D.hist.unshift(e);D.cur.id=e.id}
   save();render();toast("Liste enregistrée dans l'historique");
 }
 $("save").onclick=enregistrer;
 $("raz").onclick=()=>{
   if(choisis().length&&!confirm("Commencer une nouvelle liste ?\nLes quantités et prix actuels seront effacés (pensez à Enregistrer avant)."))return;
-  S.items.forEach(i=>{i.on=false;i.q=1;i.u="";i.pu=""});S.cur={id:null,name:""};save();render();scrollTo(0,0)
+  D.items.forEach(i=>{i.on=false;i.q=1;i.u="";i.pu=""});D.cur={id:null,name:""};save();render();scrollTo(0,0)
 };
 $("hist").addEventListener("click",e=>{
   const act=e.target.dataset.act;if(!act)return;
-  const box=e.target.closest(".hist"),h=S.hist.find(x=>x.id==box.dataset.h);
+  const box=e.target.closest(".hist"),h=D.hist.find(x=>x.id==box.dataset.h);
   if(act==="voir"){const d=box.querySelector("[data-detail]");
     d.innerHTML=d.innerHTML?"":`<table><tr><th>Produit</th><th>Qté</th><th class="r">P.U.</th><th class="r">Total</th></tr>`+
       h.lines.map(x=>`<tr><td>${esc(x.nom)}</td><td>${esc(qtxt(x))}</td><td class="r">${nf(x.pu)}</td><td class="r">${nf(x.total)}</td></tr>`).join("")+`</table>`}
   if(act==="pdf")telechargerPDF(h.lines,h.name||"Liste du "+dfr(h.date),h.date);
-  if(act==="sup"&&confirm("Supprimer cette liste de l'historique ?")){S.hist=S.hist.filter(x=>x!==h);if(S.cur.id===h.id)S.cur.id=null;save();render()}
+  if(act==="sup"&&confirm("Supprimer cette liste de l'historique ?")){D.hist=D.hist.filter(x=>x!==h);if(D.cur.id===h.id)D.cur.id=null;save();render()}
   if(act==="rouvrir"){
     if(choisis().length&&!confirm("Remplacer la liste en cours par celle-ci pour la compléter ?"))return;
-    S.items.forEach(i=>{i.on=false;i.q=1;i.u="";i.pu=""});
-    h.lines.forEach(x=>{let i=S.items.find(i=>i.nom.toLowerCase()===x.nom.toLowerCase());
-      if(!i){i={id:S.next++,cat:"Mes produits",nom:x.nom};S.items.unshift(i)}
+    D.items.forEach(i=>{i.on=false;i.q=1;i.u="";i.pu=""});
+    h.lines.forEach(x=>{let i=D.items.find(i=>i.nom.toLowerCase()===x.nom.toLowerCase());
+      if(!i){i={id:S.next++,cat:"Mes produits",nom:x.nom};D.items.unshift(i);miroir(i)}
       Object.assign(i,{on:true,q:x.q,u:x.u,pu:x.pu||""})});
-    S.cur={id:h.id,name:h.name||""};save();render();scrollTo(0,0);toast("Liste rouverte : ajoutez des produits")
+    D.cur={id:h.id,name:h.name||""};save();render();scrollTo(0,0);toast("Liste rouverte : ajoutez des produits")
   }
 });
 
@@ -266,7 +288,7 @@ $("csv").onclick=()=>{
   let t="Produit;Quantité;Unité;Prix unitaire (FCFA);Total (FCFA)\r\n";
   l.forEach(x=>t+=[q(x.nom),num(x.q),q(x.u),num(x.pu),num(x.total)].join(";")+"\r\n");
   t+=";;;TOTAL;"+num(somme(l))+"\r\n";
-  save_(new Blob(["﻿"+t],{type:"text/csv;charset=utf-8"}),"liste-courses-"+new Date().toISOString().slice(0,10)+".csv");
+  save_(new Blob(["﻿"+t],{type:"text/csv;charset=utf-8"}),lab().f+new Date().toISOString().slice(0,10)+".csv");
 };
 function save_(blob,nom){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=nom;document.body.appendChild(a);a.click();a.remove()}
 
@@ -291,9 +313,9 @@ function construirePDF(lines,titre,dateIso){
     text(X[0]+6,y+16,"N°",10,1,"ffffff");text(X[1]+6,y+16,"Produit",10,1,"ffffff");
     text(X[3]-8,y+16,"Quantité",10,1,"ffffff","r");text(X[4]-8,y+16,"Prix unit. (FCFA)",10,1,"ffffff","r");text(R-8,y+16,"Total (FCFA)",10,1,"ffffff","r");y+=24};
   const nouvelle=(prem)=>{P=[];pages.push(P);
-    if(prem){rect(0,0,W,96,"14305e");text(M,44,"Liste de courses",24,1,"ffffff");
+    if(prem){rect(0,0,W,96,"14305e");text(M,44,lab().t,24,1,"ffffff");
       text(M,68,fit(titre,W-2*M,12,0),12,0,"cfd9ee");text(W-M,68,dfr(dateIso),12,0,"cfd9ee","r");y=118}
-    else{rect(0,0,W,40,"14305e");text(M,26,"Liste de courses — "+fit(titre,300,11,0),11,1,"ffffff");y=60}
+    else{rect(0,0,W,40,"14305e");text(M,26,lab().t+" — "+fit(titre,300,11,0),11,1,"ffffff");y=60}
     entete()};
   nouvelle(true);
   lines.forEach((x,n)=>{
@@ -332,10 +354,13 @@ function construirePDF(lines,titre,dateIso){
 }
 function telechargerPDF(lines,titre,dateIso){
   if(!lines.length)return alert("Cochez d'abord au moins un produit.");
-  save_(construirePDF(lines,titre,dateIso),"liste-courses-"+new Date(dateIso).toISOString().slice(0,10)+".pdf");
+  save_(construirePDF(lines,titre,dateIso),lab().f+new Date(dateIso).toISOString().slice(0,10)+".pdf");
 }
-$("pdf").onclick=()=>telechargerPDF(lignes(),(S.cur.name||"").trim()||"Liste du "+dfr(new Date().toISOString()),
-  S.cur.id&&S.hist.find(h=>h.id===S.cur.id)?S.hist.find(h=>h.id===S.cur.id).date:new Date().toISOString());
+$("pdf").onclick=()=>telechargerPDF(lignes(),(D.cur.name||"").trim()||"Liste du "+dfr(new Date().toISOString()),
+  D.cur.id&&D.hist.find(h=>h.id===D.cur.id)?D.hist.find(h=>h.id===D.cur.id).date:new Date().toISOString());
+document.querySelector(".tabs").addEventListener("click",e=>{
+  const m=e.target.dataset.mode;if(!m||m===S.mode)return;
+  S.mode=m;D=S.modes[m];$("rech").value="";$("pan").classList.remove("open");save();render();scrollTo(0,0)});
 render();
 </script>
 </body>
