@@ -15,7 +15,7 @@
 :root{--bleu:#14305e;--bleu2:#1d4a8a;--fond:#f3f5f9;--ligne:#dde3ee;--ok:#1f8a4c}
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:var(--fond);color:#1b2433;padding-bottom:150px}
-header{background:var(--bleu);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+header{background:var(--bleu);color:#fff;padding:14px 16px;flex-wrap:wrap;display:flex;justify-content:space-between;align-items:center;gap:10px}
 header h1{margin:0;font-size:20px}
 header a{color:#fff;background:#ffffff26;padding:6px 12px;border-radius:16px;text-decoration:none;font-size:14px}
 .bar{display:flex;gap:8px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--ligne);position:sticky;top:0;z-index:5}
@@ -79,7 +79,7 @@ body:not(.dt) #vueDettes{display:none}
 </style>
 </head>
 <body>
-<header><h1 id="titre">📒 Carnet des dépenses</h1><span style="display:flex;gap:8px;align-items:center"><button id="install" style="display:none;background:#ffd54a;color:#14305e;font-weight:600;padding:6px 12px;border-radius:16px;font-size:14px">⬇ Installer</button><a href="#histo" id="lienHisto">Historique</a></span></header>
+<header><h1 id="titre">📒 Carnet des dépenses</h1><span style="display:flex;gap:8px;align-items:center"><button id="install" style="display:none;background:#ffd54a;color:#14305e;font-weight:600;padding:6px 12px;border-radius:16px;font-size:14px">⬇ Installer</button><button id="partage" title="Partager l'appli" style="background:#ffffff26;padding:6px 12px;border-radius:16px;font-size:14px">📤 Partager</button><a href="#histo" id="lienHisto">Historique</a></span></header>
 <div class="tabs"><button data-mode="courses">🛒 Courses</button><button data-mode="credits">💳 Crédits</button><button data-mode="dettes">🤝 Dettes</button></div>
 <div class="bar">
   <input id="rech" placeholder="Rechercher ou ajouter un produit…" autocomplete="off">
@@ -518,6 +518,14 @@ function construirePDFDettes(L){
   pages.forEach((p,i)=>{p.push(`BT 0.4 0.44 0.52 rg /F1 9 Tf ${W/2-30} 24 Td (Page ${i+1} / ${pages.length}) Tj ET`)});
   return assembler(pages,W,H);
 }
+/* ---------- Partage de l'appli ---------- */
+const LIEN_APP="https://kouessi-dev.github.io/liste-courses/";
+$("partage").onclick=async()=>{
+  const d={title:"Carnet des dépenses",text:"Carnet des dépenses : courses, crédits et dettes avec totaux et PDF. Installez-le gratuitement :",url:LIEN_APP};
+  if(navigator.share){try{await navigator.share(d);return}catch(e){if(e&&e.name==="AbortError")return}}
+  try{await navigator.clipboard.writeText(d.text+" "+d.url);toast("Lien copié : collez-le dans WhatsApp ou un SMS")}
+  catch(e){prompt("Copiez ce lien pour le partager :",d.url)}
+};
 /* ---------- Installation (raccourci sur l'écran d'accueil / le bureau) ---------- */
 let invite=null;
 const ios=/iphone|ipad|ipod/i.test(navigator.userAgent),autonome=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
