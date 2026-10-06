@@ -111,8 +111,8 @@ body:not(.dt) #vueDettes{display:none}
   <div id="hist"></div>
 </main>
 <datalist id="unites">
-  <option value="sac"><option value="carton"><option value="paquet"><option value="boîte"><option value="bouteille">
-  <option value="L"><option value="kg"><option value="g"><option value="pièce"><option value="tas"><option value="bidon"><option value="sachet"><option value="lot">
+  <option value="bidon"><option value="boîte"><option value="bouteille"><option value="carton"><option value="g">
+  <option value="kg"><option value="L"><option value="lot"><option value="paquet"><option value="pièce"><option value="sac"><option value="sachet"><option value="tas">
 </datalist>
 <div class="toast" id="toast"></div>
 <div class="total">
@@ -178,6 +178,7 @@ const $=id=>document.getElementById(id);
 const nf=n=>Math.round(n).toLocaleString("fr-FR").replace(/[  ]/g," ");
 const fmt=n=>nf(n)+" FCFA";
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const alpha=(a,b)=>String(a).localeCompare(String(b),"fr",{sensitivity:"base"});
 const ligne=i=>(+i.q||0)*(+i.pu||0);
 const qtxt=i=>(+i.q||0)+(i.u?" "+i.u:"");
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -186,9 +187,9 @@ function toast(t){const e=$("toast");e.textContent=t;e.style.display="block";cle
 
 function render(){
   const f=$("rech").value.trim().toLowerCase();
-  let h="";const cats=[...new Set(D.items.map(i=>i.cat))];
+  let h="";const cats=[...new Set(D.items.map(i=>i.cat))].sort(alpha);
   cats.forEach(c=>{
-    const its=D.items.filter(i=>i.cat===c&&(!f||i.nom.toLowerCase().includes(f)));
+    const its=D.items.filter(i=>i.cat===c&&(!f||i.nom.toLowerCase().includes(f))).sort((a,b)=>alpha(a.nom,b.nom));
     if(!its.length)return;
     h+=`<h2>${esc(c)}</h2>`;
     its.forEach(i=>{h+=`<div class="item ${i.on?"on":""}" data-id="${i.id}">
@@ -264,7 +265,7 @@ $("liste").addEventListener("click",e=>{
 $("rech").addEventListener("input",render);
 $("nomListe").addEventListener("input",e=>{D.cur.name=e.target.value;save()});
 function majRayons(){
-  const cats=[...new Set(D.items.map(i=>i.cat))];
+  const cats=[...new Set(D.items.map(i=>i.cat))].sort(alpha);
   $("aCat").innerHTML=cats.map(c=>`<option>${esc(c)}</option>`).join("")+'<option value="__new">+ Nouveau rayon…</option>';
   $("aNew").style.display="none";
 }
@@ -290,7 +291,7 @@ $("rech").addEventListener("keydown",e=>{if(e.key==="Enter"){const f=$("rech").v
   if(f&&!D.items.some(i=>i.nom.toLowerCase().includes(f)))ouvrirAjout()}});
 
 function choisis(){return D.items.filter(i=>i.on)}
-const lignes=()=>choisis().map(i=>({nom:i.nom,q:+i.q||0,u:i.u||"",pu:+i.pu||0,total:ligne(i)}));
+const lignes=()=>choisis().sort((a,b)=>alpha(a.nom,b.nom)).map(i=>({nom:i.nom,q:+i.q||0,u:i.u||"",pu:+i.pu||0,total:ligne(i)}));
 const somme=l=>l.reduce((a,x)=>a+x.total,0);
 
 function enregistrer(){
@@ -430,15 +431,15 @@ $("pdf").onclick=()=>{
 const resteD=d=>Math.max(d.m-paye(d),0);
 function renderDettes(){
   const L=S.dettes,T=L.reduce((a,d)=>a+d.m,0),Pm=L.reduce((a,d)=>a+paye(d),0);
-  $("noms").innerHTML=[...new Set(L.map(d=>d.nom))].map(n=>`<option value="${esc(n)}">`).join("");
+  $("noms").innerHTML=[...new Set(L.map(d=>d.nom))].sort(alpha).map(n=>`<option value="${esc(n)}">`).join("");
   $("dCumul").innerHTML=L.length?`<div class="cumul c3"><div><span>Total des dettes · ${L.length} dette${L.length>1?"s":""}</span><strong>${fmt(T)}</strong></div><div><span>Déjà payé</span><b>${fmt(Pm)}</b></div><div><span>Reste à payer</span><strong style="color:#ffd54a">${fmt(Math.max(T-Pm,0))}</strong></div></div>`:"";
   $("nb").textContent=L.length+" dette"+(L.length>1?"s":"")+" · reste à payer";
   $("tot").textContent=fmt(Math.max(T-Pm,0));
   const g={};L.forEach(d=>{const k=d.nom.toLowerCase();(g[k]=g[k]||{nom:d.nom,l:[]}).l.push(d)});
-  const gs=Object.values(g).sort((a,b)=>b.l.reduce((x,d)=>x+resteD(d),0)-a.l.reduce((x,d)=>x+resteD(d),0));
+  const gs=Object.values(g).sort((a,b)=>alpha(a.nom,b.nom));
   $("dList").innerHTML=gs.length?gs.map(x=>{const r=x.l.reduce((a,d)=>a+resteD(d),0);
     return `<div class="grp"><span>${esc(x.nom)}</span>${r>0?`<small>Reste ${fmt(r)}</small>`:'<small style="color:var(--ok)">✓ Soldé</small>'}</div>`+
-    x.l.map(d=>`<div class="hist" data-d="${d.id}">
+    x.l.sort((p,q)=>alpha(p.motif||"Dette",q.motif||"Dette")).map(d=>`<div class="hist" data-d="${d.id}">
       <div class="t"><span>${esc(d.motif||"Dette")}</span><span>${fmt(d.m)}</span></div>
       <div class="m">${dfr(d.date)}</div>
       ${resteD(d)>0?`<div class="solde rest">Payé ${fmt(paye(d))} · Reste ${fmt(resteD(d))}</div>`:`<div class="solde ok">✓ Soldé · payé ${fmt(paye(d))}</div>`}
@@ -478,7 +479,7 @@ function dettesCSV(){
   if(!S.dettes.length)return alert("Aucune dette à exporter.");
   const q=t=>'"'+String(t).replace(/"/g,'""')+'"',num=n=>String(n).replace(".",",");
   let t="Nom;Motif;Date;Montant (FCFA);Payé (FCFA);Reste (FCFA)\r\n";
-  S.dettes.forEach(d=>t+=[q(d.nom),q(d.motif||""),new Date(d.date).toLocaleDateString("fr-FR"),num(d.m),num(paye(d)),num(resteD(d))].join(";")+"\r\n");
+  [...S.dettes].sort((a,b)=>alpha(a.nom,b.nom)||a.date.localeCompare(b.date)).forEach(d=>t+=[q(d.nom),q(d.motif||""),new Date(d.date).toLocaleDateString("fr-FR"),num(d.m),num(paye(d)),num(resteD(d))].join(";")+"\r\n");
   t+=";;TOTAL;"+num(S.dettes.reduce((a,d)=>a+d.m,0))+";"+num(S.dettes.reduce((a,d)=>a+paye(d),0))+";"+num(S.dettes.reduce((a,d)=>a+resteD(d),0))+"\r\n";
   save_(new Blob(["﻿"+t],{type:"text/csv;charset=utf-8"}),"dettes-"+new Date().toISOString().slice(0,10)+".csv");
 }
@@ -501,7 +502,7 @@ function construirePDFDettes(L){
     else{rect(0,0,W,40,"14305e");text(M,26,"Dettes (suite)",11,1,"ffffff");y=60}
     entete()};
   nouvelle(true);
-  const rows=[...L].sort((a,b)=>a.nom.localeCompare(b.nom,"fr")||a.date.localeCompare(b.date));
+  const rows=[...L].sort((a,b)=>alpha(a.nom,b.nom)||a.date.localeCompare(b.date));
   rows.forEach((d,n)=>{
     if(y+24>H-70)nouvelle(false);
     if(n%2===0)rect(M,y,W-2*M,24,"f1f4fa");
