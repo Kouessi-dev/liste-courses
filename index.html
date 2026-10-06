@@ -55,6 +55,11 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--bleu
 .tabs button.act{background:var(--fond);color:var(--bleu)}
 .cumul{background:var(--bleu);color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline}
 .cumul strong{font-size:20px}
+.solde{font-size:13px;margin:2px 0 8px;font-weight:600}
+.solde.rest{color:#b45309}.solde.ok{color:var(--ok)}
+.cumul.c3{display:block}.cumul.c3 div{display:flex;justify-content:space-between;align-items:baseline;padding:2px 0}
+.pay{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--ligne);font-size:14px}
+.pay button{background:none;color:#b3261e;padding:2px 8px}
 .pan{background:#fff;border-bottom:1px solid var(--ligne);padding:10px 16px;display:none;gap:8px;flex-wrap:wrap}
 .pan.open{display:flex}
 .pan input,.pan select{padding:10px;border:1px solid var(--ligne);border-radius:8px;font-size:16px;flex:1;min-width:130px;background:#fff}
@@ -187,13 +192,24 @@ function totaux(){
   $("nb").textContent=on.length+" produit"+(on.length>1?"s":"")+" coché"+(on.length>1?"s":"");
   $("tot").textContent=fmt(on.reduce((a,i)=>a+ligne(i),0));
 }
+const paye=e=>(e.paie||[]).reduce((a,p)=>a+p.m,0);
+const credit=()=>S.mode==="credits";
+function detailHtml(h){
+  let t=`<table><tr><th>Produit</th><th>Qté</th><th class="r">P.U.</th><th class="r">Total</th></tr>`+
+    h.lines.map(x=>`<tr><td>${esc(x.nom)}</td><td>${esc(qtxt(x))}</td><td class="r">${nf(x.pu)}</td><td class="r">${nf(x.total)}</td></tr>`).join("")+`</table>`;
+  if(credit()&&(h.paie||[]).length)t+=`<h2 style="margin:12px 0 4px">Paiements</h2>`+h.paie.map(p=>
+    `<div class="pay"><span>${dfr(p.date)}</span><span><b>${fmt(p.m)}</b> <button data-act="delpay" data-pid="${p.id}" title="Annuler ce paiement">✕</button></span></div>`).join("");
+  return t}
 function renderHist(){
   $("lienHisto").textContent="Historique ("+D.hist.length+")";
-  const cum=D.hist.length?`<div class="cumul"><span>Total cumulé · ${D.hist.length} liste${D.hist.length>1?"s":""}</span><strong>${fmt(D.hist.reduce((a,e)=>a+e.total,0))}</strong></div>`:"";
+  const T=D.hist.reduce((a,e)=>a+e.total,0),Pm=D.hist.reduce((a,e)=>a+paye(e),0);
+  const cum=!D.hist.length?"":credit()
+    ?`<div class="cumul c3"><div><span>Total des crédits · ${D.hist.length} liste${D.hist.length>1?"s":""}</span><strong>${fmt(T)}</strong></div><div><span>Déjà payé</span><b>${fmt(Pm)}</b></div><div><span>Reste à payer</span><strong style="color:#ffd54a">${fmt(Math.max(T-Pm,0))}</strong></div></div>`
+    :`<div class="cumul"><span>Total cumulé · ${D.hist.length} liste${D.hist.length>1?"s":""}</span><strong>${fmt(T)}</strong></div>`;
   $("hist").innerHTML=cum+(D.hist.length?D.hist.map(e=>`<div class="hist" data-h="${e.id}">
     <div class="t"><span>${esc(e.name||"Liste du "+dfr(e.date))}</span><span>${fmt(e.total)}</span></div>
-    <div class="m">${dfr(e.date)} · ${e.lines.length} produit${e.lines.length>1?"s":""}</div>
-    <div class="a"><button class="sec" data-act="voir">Détail</button><button class="sec" data-act="rouvrir">Compléter</button><button data-act="pdf">PDF</button><button class="sec" data-act="sup" style="color:#b3261e">Supprimer</button></div>
+    <div class="m">${dfr(e.date)} · ${e.lines.length} produit${e.lines.length>1?"s":""}</div>${credit()?(e.total-paye(e)>0?`<div class="solde rest">Payé ${fmt(paye(e))} · Reste ${fmt(e.total-paye(e))}</div>`:`<div class="solde ok">✓ Soldé · payé ${fmt(paye(e))}</div>`):""}
+    <div class="a">${credit()?'<button data-act="payer" style="background:var(--ok)">💰 Paiement</button>':""}<button class="sec" data-act="voir">Détail</button><button class="sec" data-act="rouvrir">Compléter</button><button data-act="pdf">PDF</button><button class="sec" data-act="sup" style="color:#b3261e">Supprimer</button></div>
     <div data-detail></div></div>`).join(""):'<div class="vide">Aucune liste enregistrée pour le moment. Cochez vos produits puis appuyez sur « Enregistrer ».</div>');
 }
 const get=e=>D.items.find(i=>i.id==e.target.closest(".item").dataset.id);
@@ -266,10 +282,22 @@ $("raz").onclick=()=>{
 $("hist").addEventListener("click",e=>{
   const act=e.target.dataset.act;if(!act)return;
   const box=e.target.closest(".hist"),h=D.hist.find(x=>x.id==box.dataset.h);
-  if(act==="voir"){const d=box.querySelector("[data-detail]");
-    d.innerHTML=d.innerHTML?"":`<table><tr><th>Produit</th><th>Qté</th><th class="r">P.U.</th><th class="r">Total</th></tr>`+
-      h.lines.map(x=>`<tr><td>${esc(x.nom)}</td><td>${esc(qtxt(x))}</td><td class="r">${nf(x.pu)}</td><td class="r">${nf(x.total)}</td></tr>`).join("")+`</table>`}
-  if(act==="pdf")telechargerPDF(h.lines,h.name||"Liste du "+dfr(h.date),h.date);
+  if(act==="voir"){const d=box.querySelector("[data-detail]");d.innerHTML=d.innerHTML?"":detailHtml(h)}
+  if(act==="payer"){
+    const reste=Math.max(h.total-paye(h),0);
+    const v=prompt("Montant payé (FCFA) — reste à payer : "+nf(reste),reste||"");
+    const m=Math.round(parseFloat(String(v||"").replace(/\s/g,"").replace(",",".")));
+    if(!m||m<=0)return;
+    if(m>reste&&!confirm("Ce montant dépasse le reste à payer ("+nf(reste)+" FCFA). Enregistrer quand même ?"))return;
+    (h.paie=h.paie||[]).push({id:Date.now(),date:new Date().toISOString(),m});
+    save();renderHist();toast("Paiement de "+fmt(m)+" enregistré");
+    const nb=$("hist").querySelector('[data-h="'+h.id+'"] [data-act="voir"]');if(nb)nb.click();
+  }
+  if(act==="delpay"&&confirm("Annuler ce paiement ?")){
+    h.paie=h.paie.filter(p=>p.id!=e.target.dataset.pid);save();renderHist();
+    const nb=$("hist").querySelector('[data-h="'+h.id+'"] [data-act="voir"]');if(nb)nb.click();
+  }
+  if(act==="pdf")telechargerPDF(h.lines,h.name||"Liste du "+dfr(h.date),h.date,credit()?(h.paie||[]):undefined);
   if(act==="sup"&&confirm("Supprimer cette liste de l'historique ?")){D.hist=D.hist.filter(x=>x!==h);if(D.cur.id===h.id)D.cur.id=null;save();render()}
   if(act==="rouvrir"){
     if(choisis().length&&!confirm("Remplacer la liste en cours par celle-ci pour la compléter ?"))return;
@@ -301,7 +329,7 @@ const WIN={"œ":0x9c,"Œ":0x8c,"€":0x80,"’":0x92,"‘":0x91,"—":0x97,"–"
 function enc(s){let o="";for(const ch of s){const c=ch.charCodeAt(0);let b=WIN[ch]||(c<256?c:63);const x=String.fromCharCode(b);o+=(x==="("||x===")"||x==="\\")?"\\"+x:x}return o}
 function fit(s,w,size,bold){if(sw(s,size,bold)<=w)return s;while(s.length>1&&sw(s+"...",size,bold)>w)s=s.slice(0,-1);return s+"..."}
 
-function construirePDF(lines,titre,dateIso){
+function construirePDF(lines,titre,dateIso,paie){
   const W=595,H=842,M=40,pages=[];let P,y;
   const col=h=>(h.match(/\w\w/g).map(x=>(parseInt(x,16)/255).toFixed(3))).join(" ");
   const rect=(x,yy,w,h,c)=>P.push(`${col(c)} rg ${x} ${H-yy-h} ${w} ${h} re f`);
@@ -333,7 +361,14 @@ function construirePDF(lines,titre,dateIso){
   rect(M,y+6,W-2*M,32,"14305e");
   text(M+10,y+27,"TOTAL GÉNÉRAL",12,1,"ffffff");
   text(R-10,y+27,nf(somme(lines))+" FCFA",14,1,"ffd54a","r");
-  y+=44;text(M,y+14,lines.length+" produit"+(lines.length>1?"s":""),10,0,"667085");
+  y+=44;
+  if(paie){const pt=paie.reduce((a,p)=>a+p.m,0),reste=somme(lines)-pt;
+    if(y+paie.length*18+70>H-60)nouvelle(false);
+    paie.forEach(p=>{text(M+10,y+12,"Paiement du "+dfr(p.date),10,0,"1b2433");text(R-10,y+12,"- "+nf(p.m)+" FCFA",10,1,"1f8a4c","r");y+=18});
+    rect(M,y+4,W-2*M,28,reste>0?"b45309":"1f8a4c");
+    text(M+10,y+23,reste>0?"RESTE À PAYER":"SOLDÉ",12,1,"ffffff");
+    text(R-10,y+23,nf(Math.max(reste,0))+" FCFA",13,1,"ffffff","r");y+=44}
+  text(M,y+14,lines.length+" produit"+(lines.length>1?"s":""),10,0,"667085");
   pages.forEach((p,i)=>{p.push(`BT 0.4 0.44 0.52 rg /F1 9 Tf ${W/2-30} 24 Td (Page ${i+1} / ${pages.length}) Tj ET`)});
   // assemblage
   const objs=[];const add=s=>(objs.push(s),objs.length);
@@ -352,12 +387,14 @@ function construirePDF(lines,titre,dateIso){
   const u=new Uint8Array(out.length);for(let i=0;i<out.length;i++)u[i]=out.charCodeAt(i)&255;
   return new Blob([u],{type:"application/pdf"});
 }
-function telechargerPDF(lines,titre,dateIso){
+function telechargerPDF(lines,titre,dateIso,paie){
   if(!lines.length)return alert("Cochez d'abord au moins un produit.");
-  save_(construirePDF(lines,titre,dateIso),lab().f+new Date(dateIso).toISOString().slice(0,10)+".pdf");
+  save_(construirePDF(lines,titre,dateIso,paie),lab().f+new Date(dateIso).toISOString().slice(0,10)+".pdf");
 }
-$("pdf").onclick=()=>telechargerPDF(lignes(),(D.cur.name||"").trim()||"Liste du "+dfr(new Date().toISOString()),
-  D.cur.id&&D.hist.find(h=>h.id===D.cur.id)?D.hist.find(h=>h.id===D.cur.id).date:new Date().toISOString());
+$("pdf").onclick=()=>{
+  const ex=D.cur.id&&D.hist.find(h=>h.id===D.cur.id);
+  telechargerPDF(lignes(),(D.cur.name||"").trim()||"Liste du "+dfr(new Date().toISOString()),
+    ex?ex.date:new Date().toISOString(),credit()?(ex?ex.paie||[]:[]):undefined)};
 document.querySelector(".tabs").addEventListener("click",e=>{
   const m=e.target.dataset.mode;if(!m||m===S.mode)return;
   S.mode=m;D=S.modes[m];$("rech").value="";$("pan").classList.remove("open");save();render();scrollTo(0,0)});
